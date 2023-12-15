@@ -8,72 +8,133 @@ Francisco José Ramos Moya
 
 /*
 
-
-
+#include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
-#include <stdio.h>
 
 #define NUM_THREADS 4
-#define NUM_ITERATIONS 1000000
+
+sem_t semaphore1, semaphore2, semaphore3, semaphore4;
 
 int counter = 0;
 
-// Define semaphores
-sem_t s[NUM_THREADS];
+void* thread0(void* arg) {
+     int id = *((int*)arg);
 
-// Thread functions
-void *thread0(void *arg) {
-    int id = *((int *)arg);
+     if (id == 0) {
 
-    sem_wait(&s[id]); // Wait for the semaphore
+         printf("I\n");
 
-    printf("ID = %d\n", id);
-    printf("A\n");
-    for (int i = 0; i < NUM_ITERATIONS; i++) {
-        counter++;
-    }
-    printf("B\n");
-    printf("C\n");
-    for (int i = 0; i < NUM_ITERATIONS; i++) {
-        counter++;
-    }
+         sem_post(&semaphore2);
 
-    sem_post(&s[(id + 1) % NUM_THREADS]); // Signal the next semaphore
-    return NULL;
+         sem_wait(&semaphore1);
+
+         printf("J\n");
+     }
+
+     return NULL;
 }
 
-// Define other thread functions similarly (thread1, thread2, thread3)
+void* thread1(void* arg) {
+     int id = *((int*)arg);
+
+     if (id == 1) {
+         sem_wait(&semaphore2);
+         printf("D\n");
+         sem_post(&semaphore3);
+         sem_wait(&semaphore2);
+         printf("E\n");
+        sem_post(&semaphore4);
+
+   }
+
+     return NULL;
+}
+
+void* thread2(void* arg) {
+     int id = *((int*)arg);
+
+     if (id == 2) {
+         sem_wait(&semaphore3);
+         printf("F\n");
+         sem_post(&semaphore4);
+
+         sem_wait(&semaphore3);
+         printf("G\n");
+
+        sem_wait(&semaphore3);
+         printf("H\n");
+     }
+
+     return NULL;
+}
+
+void* thread3(void* arg) {
+     int id = *((int*)arg);
+
+     if (id == 3) {
+         sem_wait(&semaphore4);
+         printf("A\n");
+         sem_post(&semaphore3);
+         sem_post(&semaphore1);
+
+         printf("B\n");
+        sem_wait(&semaphore4);
+         printf("C\n");
+         sem_post(&semaphore2);
+        sem_post(&semaphore3);
+
+     }
+
+     return NULL;
+}
 
 int main() {
-    // Initialize semaphores
-    for (int i = 0; i < NUM_THREADS; i++) {
-        sem_init(&s[i], 0, 0);
-    }
+     pthread_t threads[NUM_THREADS];
+     int thread_ids[NUM_THREADS];
+     int rc;
+     long t;
 
-    // Create thread IDs
-    pthread_t threads[NUM_THREADS];
-    int thread_ids[NUM_THREADS];
-    for (int i = 0; i < NUM_THREADS; i++) {
-        thread_ids[i] = i;
-        pthread_create(&threads[i], NULL, thread0, (void *)&thread_ids[i]);
-    }
+     sem_init(&semaphore1, 0, 0);
+     sem_init(&semaphore2, 0, 0);
+     sem_init(&semaphore3, 0, 0);
+     sem_init(&semaphore4, 0, 0);
 
-    // Signal the first semaphore to start the chain
-    sem_post(&s[0]);
+     // Crear hilos
+     for (t = 0; t < NUM_THREADS; t++) {
+         thread_ids[t] = t;
+         if (t == 0) {
+             rc = pthread_create(&threads[t], NULL, thread0,
+(void*)&thread_ids[t]);
+         } else if (t == 1) {
+             rc = pthread_create(&threads[t], NULL, thread1,
+(void*)&thread_ids[t]);
+         } else if (t == 2) {
+             rc = pthread_create(&threads[t], NULL, thread2,
+(void*)&thread_ids[t]);
+         } else {
+             rc = pthread_create(&threads[t], NULL, thread3,
+(void*)&thread_ids[t]);
+         }
 
-    // Wait for all threads to finish
-    for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
-    }
+         if (rc) {
+             printf("Error: return code from pthread_create() is %d\n",
+rc);
+             exit(-1);
+         }
+     }
 
-    // Print the final value of the counter
-    printf("Final Counter Value: %d\n", counter);
+     // Esperar a que los hilos terminen
+     for (t = 0; t < NUM_THREADS; t++) {
+         pthread_join(threads[t], NULL);
+     }
 
-    // Clean up resources
-    for (int i = 0; i < NUM_THREADS; i++) {
-        sem_destroy(&s[i]);
-    }
+     // Destruir semáforos
+     sem_destroy(&semaphore1);
+     sem_destroy(&semaphore2);
+     sem_destroy(&semaphore3);
+     sem_destroy(&semaphore4);
 
-    return 0;
+     return 0;
 }
