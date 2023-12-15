@@ -1,0 +1,67 @@
+#include <pthread.h>
+#include <semaphore.h>
+#include <stdio.h>
+
+#define NUM_THREADS 4
+#define NUM_ITERATIONS 1000000
+
+int counter = 0;
+
+// Define semaphores
+sem_t s[NUM_THREADS];
+
+// Thread functions
+void *thread0(void *arg) {
+    int id = *((int *)arg);
+
+    sem_wait(&s[id]); // Wait for the semaphore
+
+    printf("ID = %d\n", id);
+    printf("A\n");
+    for (int i = 0; i < NUM_ITERATIONS; i++) {
+        counter++;
+    }
+    printf("B\n");
+    printf("C\n");
+    for (int i = 0; i < NUM_ITERATIONS; i++) {
+        counter++;
+    }
+
+    sem_post(&s[(id + 1) % NUM_THREADS]); // Signal the next semaphore
+    return NULL;
+}
+
+// Define other thread functions similarly (thread1, thread2, thread3)
+
+int main() {
+    // Initialize semaphores
+    for (int i = 0; i < NUM_THREADS; i++) {
+        sem_init(&s[i], 0, 0);
+    }
+
+    // Create thread IDs
+    pthread_t threads[NUM_THREADS];
+    int thread_ids[NUM_THREADS];
+    for (int i = 0; i < NUM_THREADS; i++) {
+        thread_ids[i] = i;
+        pthread_create(&threads[i], NULL, thread0, (void *)&thread_ids[i]);
+    }
+
+    // Signal the first semaphore to start the chain
+    sem_post(&s[0]);
+
+    // Wait for all threads to finish
+    for (int i = 0; i < NUM_THREADS; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    // Print the final value of the counter
+    printf("Final Counter Value: %d\n", counter);
+
+    // Clean up resources
+    for (int i = 0; i < NUM_THREADS; i++) {
+        sem_destroy(&s[i]);
+    }
+
+    return 0;
+}
