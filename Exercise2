@@ -1,3 +1,15 @@
+Exercise 2
+
+*/
+
+MADE BY : 
+Santiago Pérez Delgado
+Francisco José Ramos Moya
+
+/*
+
+
+
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
